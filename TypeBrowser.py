@@ -26,7 +26,7 @@ class DownloadInterceptor(QWebEngineProfile):
         self.download_path = os.path.expanduser("~/Downloads")
 
     def interceptRequest(self, info):
-        # Implement custom download behavior here
+        # TODO: Implement custom download behavior here
         pass
 
 class WebPage(QWebEnginePage):
@@ -35,7 +35,7 @@ class WebPage(QWebEnginePage):
         self.featurePermissionRequested.connect(self.handlePermissionRequest)
     
     def handlePermissionRequest(self, url, feature):
-        # Implement proper permission handling
+        # TODO: Implement proper permission handling
         # simplified example
         self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
 
@@ -227,6 +227,7 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec_()
     
+    # FIXME: This method is not working as expected
     def add_new_tab(self, url="https://www.google.com"):
         tab = BrowserTab(self)
         index = self.tabs.addTab(tab, "New Tab")
