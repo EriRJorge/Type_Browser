@@ -1,9 +1,8 @@
-#TypeBrowser.py
+#Type_Browser.py
 # First Type_Software Project
 #Eri R Jorge
 #3/6/3025 - Project started
 #3/6/2025 - Added the main window and tabbed browsing, added navigation toolbar and menu bar with basic actions and shortcuts
-
 
 
 
@@ -19,7 +18,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebEngineWidgets import QWebEngineProfile
 
 VERSION = "1.0.0"
-APP_NAME = "TypeBrowser"
+APP_NAME = "Type_Browser"
 
 class DownloadInterceptor(QWebEngineProfile):
     def __init__(self, parent=None):
@@ -27,7 +26,7 @@ class DownloadInterceptor(QWebEngineProfile):
         self.download_path = os.path.expanduser("~/Downloads")
 
     def interceptRequest(self, info):
-        # You could implement custom download behavior here
+        # Implement custom download behavior here
         pass
 
 class WebPage(QWebEnginePage):
@@ -36,8 +35,8 @@ class WebPage(QWebEnginePage):
         self.featurePermissionRequested.connect(self.handlePermissionRequest)
     
     def handlePermissionRequest(self, url, feature):
-        # For a real product, implement proper permission handling
-        # This is just a simplified example
+        # Implement proper permission handling
+        # simplified example
         self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
 
 class WebView(QWebEngineView):
@@ -238,7 +237,7 @@ class MainWindow(QMainWindow):
         return tab.webview
     
     def createTab(self):
-        # This is called when a new tab is needed by the browser
+        # Called when a new tab is needed by the browser
         return self.add_new_tab()
     
     def update_tab_title(self, tab, title):
