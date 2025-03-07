@@ -133,17 +133,17 @@ class MainWindow(QMainWindow):
         nav_toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(nav_toolbar)
         
-        back_action = QAction("←", self)
+        back_action = QAction("◀", self)
         back_action.setStatusTip("Go back to previous page")
         back_action.triggered.connect(self.navigate_back)
         nav_toolbar.addAction(back_action)
         
-        forward_action = QAction("→", self)
+        forward_action = QAction("▶", self)
         forward_action.setStatusTip("Go forward to next page")
         forward_action.triggered.connect(self.navigate_forward)
         nav_toolbar.addAction(forward_action)
         
-        reload_action = QAction("↻", self)
+        reload_action = QAction("⟳", self)
         reload_action.setStatusTip("Reload current page")
         reload_action.triggered.connect(self.reload_page)
         nav_toolbar.addAction(reload_action)
