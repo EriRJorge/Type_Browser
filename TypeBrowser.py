@@ -3,7 +3,7 @@
 #Eri R Jorge
 #3/6/2025 - Project started
 #3/6/2025 - Added the main window and tabbed browsing, added navigation toolbar and menu bar with basic actions and shortcuts
-#3/8/2025 - Fixed tab functionality and improved visual styling
+#3/8/2025 - Fixed tab functionality and improved visual styling, Added Keep Alive Features
 
 
 
@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon, QKeySequence, QFont, QColor, QPalette
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtWebEngineWidgets import QWebEngineProfile
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 APP_NAME = "Type_Browser"
 
 class DownloadInterceptor(QWebEngineProfile):
