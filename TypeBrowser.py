@@ -9,7 +9,7 @@
 
 import sys
 import os
-from PyQt5.QtCore import QUrl, Qt, QSize
+from PyQt5.QtCore import QUrl, Qt, QSize, QTimer
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QToolBar, QAction, 
                             QLineEdit, QTabWidget, QWidget, QVBoxLayout, 
                             QShortcut, QMenu, QDialog, QLabel, QVBoxLayout, 
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+L"), self, self.focus_url_bar)
         
         # Add homepage tab
-        self.add_new_tab("https://www.google.com")
+        self.add_new_tab("https://typesearch.click/")
         
         # Center the window on screen
         self.center_on_screen()
@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec_()
     
-    def add_new_tab(self, url="https://www.google.com"):
+    def add_new_tab(self, url="https://typesearch.click/"):
         tab = BrowserTab(self)
         index = self.tabs.addTab(tab, "New Tab")
         self.tabs.setCurrentIndex(index)
@@ -440,11 +440,22 @@ class MainWindow(QMainWindow):
     
     def navigate_home(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().navigate("https://www.google.com")
+            self.tabs.currentWidget().navigate("https://typesearch.click/") 
     
     def focus_url_bar(self):
         self.urlbar.selectAll()
         self.urlbar.setFocus()
+
+    def closeEvent(self, event):
+        print("Close event received")
+        reply = QMessageBox.question(self, 'Confirm Exit',
+                                "Are you sure you want to quit?",
+                                QMessageBox.Yes | QMessageBox.No,
+                                QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
 def main():
     app = QApplication(sys.argv)
@@ -452,6 +463,11 @@ def main():
     
     # Set application style for all widgets
     app.setStyle("Fusion")
+
+    # Keep-alive timer to prevent abrupt closure
+    keep_alive = QTimer()
+    keep_alive.timeout.connect(lambda: None)
+    keep_alive.start(500)  # Check every 500ms
     
     window = MainWindow()
     window.show()
