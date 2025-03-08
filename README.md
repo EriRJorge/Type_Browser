@@ -1,5 +1,5 @@
 # TypeBrowser
-First Official Open Source Product if Type_Software.  TypeBrowser is a lightweight, privacy-focused web browser built with Python.
+First Official Open Source Product of Type_Software.  TypeBrowser is a lightweight, privacy-focused web browser built with Python.
 
 ---
 
