@@ -1,5 +1,8 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
+                            QLabel, QPushButton)
 from PyQt5.QtCore import Qt
+
+VERSION = "1.1.0"
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -9,46 +12,90 @@ class AboutDialog(QDialog):
         
         layout = QVBoxLayout()
         
-        # App info
-        title_label = QLabel("<h1>Type Browser</h1>")
-        title_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title_label)
+        # Title
+        title = QLabel("Type Browser")
+        title.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 24px;
+                font-weight: bold;
+                padding: 20px;
+            }
+        """)
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
         
-        version_label = QLabel("<h3>Version 1.0.2</h3>")
-        version_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(version_label)
+        # Version
+        version = QLabel(f"Version {VERSION}")
+        version.setStyleSheet("""
+            QLabel {
+                color: #cccccc;
+                font-size: 14px;
+                padding: 10px;
+            }
+        """)
+        version.setAlignment(Qt.AlignCenter)
+        layout.addWidget(version)
         
+        # Description
         description = QLabel(
-            "<p>A lightweight, privacy-focused personal web browser.</p>"
-            "<p>Built with Python and PyQt5.</p>"
+            "A modern, lightweight web browser built with Python and Qt.\n\n"
+            "Features:\n"
+            "• Fast and secure browsing\n"
+            "• Modern dark theme UI\n"
+            "• Tabbed browsing\n"
+            "• Bookmark management\n"
+            "• Download manager\n"
+            "• Customizable settings"
         )
+        description.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 12px;
+                padding: 20px;
+                line-height: 1.5;
+            }
+        """)
         description.setAlignment(Qt.AlignCenter)
-        description.setWordWrap(True)
         layout.addWidget(description)
+        
+        # Copyright
+        copyright = QLabel("© 2024 Type Browser Team")
+        copyright.setStyleSheet("""
+            QLabel {
+                color: #cccccc;
+                font-size: 11px;
+                padding: 10px;
+            }
+        """)
+        copyright.setAlignment(Qt.AlignCenter)
+        layout.addWidget(copyright)
         
         # Close button
         close_button = QPushButton("Close")
         close_button.setStyleSheet("""
             QPushButton {
-                background-color: #2979ff;
-                color: white;
-                border: none;
-                padding: 8px 16px;
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #333333;
+                padding: 8px 24px;
                 border-radius: 4px;
+                font-size: 12px;
+                min-width: 80px;
             }
             QPushButton:hover {
-                background-color: #448aff;
+                background: #3d3d3d;
+            }
+            QPushButton:pressed {
+                background: #4d4d4d;
             }
         """)
         close_button.clicked.connect(self.accept)
-        layout.addWidget(close_button, alignment=Qt.AlignCenter)
         
-        self.setLayout(layout)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-            }
-            QLabel {
-                color: #333333;
-            }
-        """) 
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(close_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout) 

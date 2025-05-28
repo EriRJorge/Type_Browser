@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QToolBar, QAction,
                             QStatusBar, QFrame, QMenuBar, QInputDialog)
 from PyQt5.QtGui import QIcon, QKeySequence, QFont, QColor, QPalette
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineSettings
-from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
+from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor, QWebEngineUrlRequestInfo
 from browser_data import BrowserData
 from settings_dialog import SettingsDialog
 from download_manager import DownloadManager
@@ -28,73 +28,129 @@ from shortcuts_dialog import ShortcutsDialog
 VERSION = "1.1.0"
 APP_NAME = "Type_Browser"
 
-class DownloadInterceptor(QWebEngineUrlRequestInterceptor):
+class RequestInterceptor(QWebEngineUrlRequestInterceptor):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.download_path = os.path.expanduser("~/Downloads")
+        self.chrome_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
 
     def interceptRequest(self, info):
-        if info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeMainFrame:
+        url = info.requestUrl()
+        is_crunchyroll = "crunchyroll.com" in url.host()
+        
+        # Set common headers for all requests
+        info.setHttpHeader(b"Accept", b"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+        info.setHttpHeader(b"Accept-Language", b"en-US,en;q=0.9")
+        info.setHttpHeader(b"Accept-Encoding", b"gzip, deflate, br")
+        info.setHttpHeader(b"Connection", b"keep-alive")
+        info.setHttpHeader(b"User-Agent", self.chrome_user_agent.encode())
+        info.setHttpHeader(b"sec-ch-ua", b'"Chromium";v="123", "Google Chrome";v="123", "Not:A-Brand";v="99"')
+        info.setHttpHeader(b"sec-ch-ua-mobile", b"?0")
+        info.setHttpHeader(b"sec-ch-ua-platform", b'"Windows"')
+        
+        # Set security headers for main frame requests
+        if info.resourceType() == QWebEngineUrlRequestInfo.ResourceTypeMainFrame:
+            info.setHttpHeader(b"Upgrade-Insecure-Requests", b"1")
+            info.setHttpHeader(b"Sec-Fetch-Dest", b"document")
+            info.setHttpHeader(b"Sec-Fetch-Mode", b"navigate")
+            info.setHttpHeader(b"Sec-Fetch-Site", b"none")
+            info.setHttpHeader(b"Sec-Fetch-User", b"?1")
+            info.setHttpHeader(b"DNT", b"1")
+            
+            # Set SameSite cookie attribute
+            info.setHttpHeader(b"Set-Cookie", b"SameSite=None; Secure")
+            
+            # Handle HTTPS upgrade
+            if url.scheme() == "http" and not url.host().startswith("localhost"):
+                https_url = QUrl(url)
+                https_url.setScheme("https")
+                info.redirect(https_url)
+        
+        # Special handling for Crunchyroll
+        if is_crunchyroll:
+            # Add Crunchyroll-specific headers
+            info.setHttpHeader(b"Origin", b"https://www.crunchyroll.com")
+            info.setHttpHeader(b"Referer", b"https://www.crunchyroll.com/")
+            
+            # Handle different resource types for Crunchyroll
+            resource_type = info.resourceType()
+            if resource_type == QWebEngineUrlRequestInfo.ResourceTypeXhr:
+                # Add headers for XHR requests
+                info.setHttpHeader(b"Content-Type", b"application/json")
+                info.setHttpHeader(b"X-Requested-With", b"XMLHttpRequest")
+            elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeScript:
+                # Add headers for script requests
+                info.setHttpHeader(b"Cache-Control", b"no-cache")
+            elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeStylesheet:
+                # Add headers for stylesheet requests
+                info.setHttpHeader(b"Cache-Control", b"no-cache")
+            elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeImage:
+                # Add headers for image requests
+                info.setHttpHeader(b"Cache-Control", b"max-age=31536000")
+        
+        # Handle different resource types
+        resource_type = info.resourceType()
+        if resource_type == QWebEngineUrlRequestInfo.ResourceTypeMainFrame:
             # Handle main frame requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeSubFrame:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeSubFrame:
             # Handle sub-frame requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeStylesheet:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeStylesheet:
             # Handle stylesheet requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeScript:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeScript:
             # Handle script requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeImage:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeImage:
             # Handle image requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeFontResource:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeFontResource:
             # Handle font requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeSubResource:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeSubResource:
             # Handle sub-resource requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeObject:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeObject:
             # Handle object requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeMedia:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeMedia:
             # Handle media requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeWorker:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeWorker:
             # Handle worker requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeSharedWorker:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeSharedWorker:
             # Handle shared worker requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypePrefetch:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypePrefetch:
             # Handle prefetch requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeFavicon:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeFavicon:
             # Handle favicon requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeXHR:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeXhr:
             # Handle XHR requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypePing:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypePing:
             # Handle ping requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeServiceWorker:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeServiceWorker:
             # Handle service worker requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeCSPReport:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeCspReport:
             # Handle CSP report requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypePluginResource:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypePluginResource:
             # Handle plugin resource requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeNavigationPreloadMainFrame:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeNavigationPreloadMainFrame:
             # Handle navigation preload main frame requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeNavigationPreloadSubFrame:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeNavigationPreloadSubFrame:
             # Handle navigation preload sub-frame requests
             pass
-        elif info.resourceType() == QWebEngineUrlRequestInterceptor.ResourceTypeOther:
+        elif resource_type == QWebEngineUrlRequestInfo.ResourceTypeOther:
             # Handle other requests
             pass
 
@@ -103,8 +159,10 @@ class WebPage(QWebEnginePage):
         super().__init__(parent)
         self.featurePermissionRequested.connect(self.handlePermissionRequest)
         
-        # Enable modern web features
+        # Enable modern web features and performance optimizations
         settings = self.settings()
+        
+        # Core Features
         settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
         settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
         settings.setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
@@ -123,32 +181,220 @@ class WebPage(QWebEnginePage):
         settings.setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
         settings.setAttribute(QWebEngineSettings.LinksIncludedInFocusChain, True)
         settings.setAttribute(QWebEngineSettings.AllowGeolocationOnInsecureOrigins, True)
-        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, False)
-        settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)  # Enable fullscreen support
+        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+        settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
         
-        # Set modern user agent
-        self.profile().setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        # Modern Web Features
+        settings.setAttribute(QWebEngineSettings.JavascriptCanPaste, True)
+        settings.setAttribute(QWebEngineSettings.PdfViewerEnabled, True)
+        settings.setAttribute(QWebEngineSettings.PlaybackRequiresUserGesture, False)
+        settings.setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
+        
+        # Set modern user agent with latest Chrome version
+        chrome_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        self.profile().setHttpUserAgent(chrome_user_agent)
+        
+        # Enable hardware acceleration and caching
+        self.profile().setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+        self.profile().setPersistentCookiesPolicy(QWebEngineProfile.AllowPersistentCookies)
+        self.profile().setCachePath(os.path.join(os.path.expanduser("~"), ".cache", "type_browser"))
+        self.profile().setPersistentStoragePath(os.path.join(os.path.expanduser("~"), ".cache", "type_browser"))
+        
+        # Set additional headers for modern web compatibility
+        self.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
+        
+        # Set up request interceptor for Cloudflare
+        self.request_interceptor = RequestInterceptor()
+        self.profile().setUrlRequestInterceptor(self.request_interceptor)
+        
+        # Inject modern web features and error handling
+        self.loadFinished.connect(self.inject_modern_features)
+        
+    def inject_modern_features(self, ok):
+        if ok:
+            self.runJavaScript("""
+                // Modern error handling
+                window.onerror = function(msg, url, lineNo, columnNo, error) {
+                    console.error('Error: ' + msg + '\\nURL: ' + url + '\\nLine: ' + lineNo + '\\nColumn: ' + columnNo + '\\nError object: ' + JSON.stringify(error));
+                    return false;
+                };
+                
+                // Promise rejection handling
+                window.addEventListener('unhandledrejection', function(event) {
+                    console.error('Unhandled promise rejection:', event.reason);
+                });
+                
+                // Fix for replaceAll error
+                if (!String.prototype.replaceAll) {
+                    String.prototype.replaceAll = function(str, newStr) {
+                        return this.split(str).join(newStr);
+                    };
+                }
+                
+                // Fix for webkitStorageInfo deprecation
+                if (window.webkitStorageInfo) {
+                    window.webkitStorageInfo = {
+                        queryUsageAndQuota: function(callback) {
+                            if (navigator.webkitTemporaryStorage) {
+                                navigator.webkitTemporaryStorage.queryUsageAndQuota(callback);
+                            } else {
+                                callback(0, 0);
+                            }
+                        }
+                    };
+                }
+                
+                // Fix for lazy loading images without dimensions
+                document.addEventListener('DOMContentLoaded', function() {
+                    const images = document.querySelectorAll('img[loading="lazy"]');
+                    images.forEach(img => {
+                        if (!img.width || !img.height) {
+                            img.addEventListener('load', function() {
+                                if (!this.width || !this.height) {
+                                    this.style.width = 'auto';
+                                    this.style.height = 'auto';
+                                }
+                            });
+                        }
+                    });
+                });
+                
+                // Fix for Crunchyroll specific issues
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Fix for missing elements
+                    const observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            if (mutation.type === 'childList') {
+                                mutation.addedNodes.forEach(function(node) {
+                                    if (node.nodeType === 1) { // Element node
+                                        // Fix for missing dimensions
+                                        if (node.tagName === 'IMG' && !node.width && !node.height) {
+                                            node.style.width = 'auto';
+                                            node.style.height = 'auto';
+                                        }
+                                        // Fix for missing styles
+                                        if (node.classList && node.classList.contains('crunchyroll-element')) {
+                                            node.style.display = 'block';
+                                            node.style.visibility = 'visible';
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    });
+                    
+                    // Start observing the document
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                    
+                    // Fix for missing elements on initial load
+                    setTimeout(function() {
+                        const elements = document.querySelectorAll('.crunchyroll-element');
+                        elements.forEach(function(element) {
+                            element.style.display = 'block';
+                            element.style.visibility = 'visible';
+                        });
+                    }, 1000);
+                });
+                
+                // Modern web features detection
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+                }
+                
+                // Enable modern web features
+                if ('Notification' in window) {
+                    Notification.requestPermission();
+                }
+                
+                // Enable modern storage features
+                if ('localStorage' in window) {
+                    window.localStorage.setItem('browser_support', 'modern');
+                }
+                
+                // Enable modern graphics features
+                if ('WebGL2RenderingContext' in window) {
+                    console.log('WebGL 2.0 is supported');
+                }
+                
+                // Enable modern performance features
+                if ('performance' in window) {
+                    window.performance.mark('browser_ready');
+                }
+                
+                // Enable modern web features
+                if ('IntersectionObserver' in window) {
+                    console.log('IntersectionObserver is supported');
+                }
+                
+                // Enable modern web features
+                if ('ResizeObserver' in window) {
+                    console.log('ResizeObserver is supported');
+                }
+                
+                // Enable modern web features
+                if ('MutationObserver' in window) {
+                    console.log('MutationObserver is supported');
+                }
+                
+                // Enable modern web features
+                if ('CustomElementRegistry' in window) {
+                    console.log('Custom Elements are supported');
+                }
+                
+                // Enable modern web features
+                if ('ShadowRoot' in window) {
+                    console.log('Shadow DOM is supported');
+                }
+                
+                // Enable modern web features
+                if ('fetch' in window) {
+                    console.log('Fetch API is supported');
+                }
+                
+                // Enable modern web features
+                if ('requestAnimationFrame' in window) {
+                    console.log('requestAnimationFrame is supported');
+                }
+                
+                // Enable modern web features
+                if ('requestIdleCallback' in window) {
+                    console.log('requestIdleCallback is supported');
+                }
+            """)
+    
+    def javaScriptConsoleMessage(self, level, message, line, source):
+        if level == QWebEnginePage.ErrorMessageLevel:
+            print(f"Error: {message} at line {line} in {source}")
+        elif level == QWebEnginePage.WarningMessageLevel:
+            print(f"Warning: {message} at line {line} in {source}")
+        elif level == QWebEnginePage.InfoMessageLevel:
+            print(f"Info: {message} at line {line} in {source}")
     
     def handlePermissionRequest(self, url, feature):
         # Handle various permission requests
         if feature == QWebEnginePage.Feature.Geolocation:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.MediaAudioCapture:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.MediaVideoCapture:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.MediaAudioVideoCapture:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.MouseLock:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.DesktopVideoCapture:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.DesktopAudioVideoCapture:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         elif feature == QWebEnginePage.Feature.Notifications:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
         else:
-            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+            self.setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
 
 class WebView(QWebEngineView):
     def __init__(self, main_window=None):
@@ -167,20 +413,8 @@ class WebView(QWebEngineView):
         # Handle fullscreen requests
         self.page.fullScreenRequested.connect(self.handle_fullscreen_request)
         
-    def handle_fullscreen_request(self, request):
-        if request.toggleOn():
-            self.main_window.showFullScreen()
-            request.accept()
-        else:
-            self.main_window.showNormal()
-            request.accept()
-        
-    def handle_new_window(self, windowType):
-        # Handle new window requests (e.g., target="_blank" links)
-        if windowType == QWebEnginePage.WebBrowserTab and self.main_window:
-            new_view = self.main_window.add_new_tab()
-            return new_view.page
-        return None
+        # Create developer tools window
+        self.dev_tools = None
         
     def show_context_menu(self, pos):
         menu = QMenu()
@@ -209,17 +443,78 @@ class WebView(QWebEngineView):
         elif action == reload_action:
             self.reload()
         elif action == copy_action:
-            self.page().triggerAction(QWebEnginePage.Copy)
+            self.page.triggerAction(QWebEnginePage.Copy)
         elif action == paste_action:
-            self.page().triggerAction(QWebEnginePage.Paste)
+            self.page.triggerAction(QWebEnginePage.Paste)
         elif action == select_all_action:
-            self.page().triggerAction(QWebEnginePage.SelectAll)
+            self.page.triggerAction(QWebEnginePage.SelectAll)
         elif action == save_page_action:
-            self.page().triggerAction(QWebEnginePage.SavePage)
+            self.page.triggerAction(QWebEnginePage.SavePage)
         elif action == view_source_action:
-            self.page().triggerAction(QWebEnginePage.ViewSource)
+            self.page.triggerAction(QWebEnginePage.ViewSource)
         elif action == inspect_action:
-            self.page().triggerAction(QWebEnginePage.InspectElement)
+            self.show_dev_tools()
+            
+    def show_dev_tools(self):
+        if not self.dev_tools:
+            self.dev_tools = QWebEngineView()
+            self.dev_tools.setWindowTitle("Developer Tools")
+            self.dev_tools.setMinimumSize(800, 600)
+            
+            # Create a new page for dev tools
+            dev_page = QWebEnginePage(self.dev_tools)
+            self.dev_tools.setPage(dev_page)
+            
+            # Connect the dev tools page to the main page
+            self.page.setDevToolsPage(dev_page)
+            
+            # Set up the dev tools window
+            self.dev_tools.setWindowFlags(Qt.Window)
+            self.dev_tools.setAttribute(Qt.WA_DeleteOnClose)
+            self.dev_tools.destroyed.connect(self.on_dev_tools_closed)
+            
+        # Show the dev tools window
+        self.dev_tools.show()
+        self.dev_tools.raise_()
+        self.dev_tools.activateWindow()
+        
+    def on_dev_tools_closed(self):
+        self.dev_tools = None
+        
+    def handle_fullscreen_request(self, request):
+        if request.toggleOn():
+            # Store current window state
+            self.main_window.was_fullscreen = self.main_window.isFullScreen()
+            
+            # Hide all UI elements
+            self.main_window.menu_bar.hide()
+            self.main_window.unified_toolbar.hide()
+            self.main_window.tabs.tabBar().hide()
+            
+            # Make the web view fill the entire window
+            self.setParent(None)
+            self.showFullScreen()
+            request.accept()
+        else:
+            # Restore the web view to its original container
+            current_tab = self.main_window.tabs.currentWidget()
+            self.setParent(current_tab)
+            current_tab.layout.addWidget(self)
+            self.showNormal()
+            
+            # Always restore UI elements when exiting webpage fullscreen
+            self.main_window.menu_bar.show()
+            self.main_window.unified_toolbar.show()
+            self.main_window.tabs.tabBar().show()
+            
+            request.accept()
+        
+    def handle_new_window(self, windowType):
+        # Handle new window requests (e.g., target="_blank" links)
+        if windowType == QWebEnginePage.WebBrowserTab and self.main_window:
+            new_view = self.main_window.add_new_tab()
+            return new_view.page
+        return None
 
 class BrowserTab(QWidget):
     def __init__(self, parent=None):
@@ -289,6 +584,10 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon("icon.png"))
         self.setMinimumSize(1024, 768)
         
+        # Enable window transparency
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        
         # Initialize browser data
         self.browser_data = BrowserData()
         
@@ -308,17 +607,22 @@ class MainWindow(QMainWindow):
         # Remove the corner widget (new tab button)
         self.tabs.setCornerWidget(None)
         
-        self.setCentralWidget(self.tabs)
+        # Create a central widget with a layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         
-        # Navigation toolbar
-        self.nav_toolbar = self.create_navigation_toolbar()
+        # Create unified toolbar
+        self.unified_toolbar = self.create_unified_toolbar()
+        layout.addWidget(self.unified_toolbar)
+        
+        # Add tabs
+        layout.addWidget(self.tabs)
         
         # Create menubar
         self.menu_bar = self.create_menu()
-        
-        # Create status bar
-        self.statusBar = QStatusBar()
-        self.setStatusBar(self.statusBar)
         
         # Set up keyboard shortcuts
         self.setup_shortcuts()
@@ -329,19 +633,39 @@ class MainWindow(QMainWindow):
         # Center the window on screen
         self.center_on_screen()
 
+        # Enable window dragging
+        self.old_pos = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.old_pos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        if self.old_pos:
+            delta = event.globalPos() - self.old_pos
+            self.move(self.pos() + delta)
+            self.old_pos = event.globalPos()
+
+    def mouseReleaseEvent(self, event):
+        self.old_pos = None
+
+    def toggle_maximize(self):
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
     def showFullScreen(self):
         # Hide UI elements in fullscreen
         self.menu_bar.hide()
-        self.nav_toolbar.hide()
-        self.statusBar.hide()
+        self.unified_toolbar.hide()
         self.tabs.tabBar().hide()  # Completely hide the tab bar
         super().showFullScreen()
 
     def showNormal(self):
         # Show UI elements when exiting fullscreen
         self.menu_bar.show()
-        self.nav_toolbar.show()
-        self.statusBar.show()
+        self.unified_toolbar.show()
         self.tabs.tabBar().show()  # Show the tab bar again
         super().showNormal()
 
@@ -527,31 +851,31 @@ class MainWindow(QMainWindow):
 
     def save_page(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.SavePage)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.SavePage)
 
     def undo(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Undo)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Undo)
 
     def redo(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Redo)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Redo)
 
     def cut(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Cut)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Cut)
 
     def copy(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Copy)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Copy)
 
     def paste(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Paste)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Paste)
 
     def find_in_page(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().webview.page().triggerAction(QWebEnginePage.Find)
+            self.tabs.currentWidget().webview.page.triggerAction(QWebEnginePage.Find)
 
     def zoom_in(self):
         if self.tabs.currentWidget():
@@ -569,12 +893,6 @@ class MainWindow(QMainWindow):
         if self.tabs.currentWidget():
             self.tabs.currentWidget().webview.setZoomFactor(1.0)
 
-    def toggle_fullscreen(self):
-        if self.isFullScreen():
-            self.showNormal()
-        else:
-            self.showFullScreen()
-
     def toggle_bookmark(self):
         if self.tabs.currentWidget():
             current_url = self.tabs.currentWidget().current_url()
@@ -584,12 +902,10 @@ class MainWindow(QMainWindow):
             for bookmark in self.browser_data.bookmarks:
                 if bookmark["url"] == current_url:
                     self.browser_data.remove_bookmark(current_url)
-                    self.statusBar.showMessage("Bookmark removed", 3000)
                     return
             
             # Add new bookmark
             self.browser_data.add_bookmark(current_title, current_url)
-            self.statusBar.showMessage("Bookmark added", 3000)
 
     def show_bookmarks(self):
         dialog = BookmarkDialog(self.browser_data, self)
@@ -662,256 +978,333 @@ class MainWindow(QMainWindow):
         if theme == "dark":
             self.setStyleSheet("""
                 QMainWindow {
-                    background-color: rgba(18, 18, 18, 0.85);
+                    background: #202124;
                 }
+                
+                QWidget {
+                    background: #202124;
+                }
+                
                 QTabWidget::pane {
                     border: none;
-                    background-color: rgba(30, 30, 30, 0.75);
-                    border-radius: 16px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    background: #202124;
                 }
+                
                 QTabWidget::tab-bar {
                     alignment: left;
-                    background-color: transparent;
-                    left: 8px;
+                    background: #202124;
+                    left: 0px;
                 }
+                
                 QTabBar::tab {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    color: rgba(255, 255, 255, 0.9);
-                    padding: 8px 20px;
-                    margin-right: 2px;
-                    border-top-left-radius: 16px;
-                    border-top-right-radius: 16px;
-                    min-width: 120px;
+                    background: #292a2d;
+                    color: #9aa0a6;
+                    padding: 6px 16px;
+                    margin-right: 1px;
+                    border: none;
+                    min-width: 100px;
                     max-width: 200px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-bottom: none;
+                    font-size: 12px;
+                    font-weight: 500;
                 }
+                
                 QTabBar::tab:selected {
-                    background-color: rgba(45, 45, 45, 0.85);
-                    border-bottom: 2px solid rgba(13, 110, 253, 0.9);
+                    background: #202124;
                     color: #ffffff;
+                    border-top: 2px solid #8ab4f8;
                 }
+                
                 QTabBar::tab:hover {
-                    background-color: rgba(40, 40, 40, 0.85);
+                    background: #35363a;
                 }
+
                 QTabBar::close-button {
                     image: none;
                     background: transparent;
                     border: none;
                     margin: 2px;
                     padding: 2px;
-                    border-radius: 4px;
-                    color: rgba(255, 255, 255, 0.6);
+                    border-radius: 2px;
+                    color: #9aa0a6;
                     font-family: "Segoe UI";
-                    font-size: 12px;
+                    font-size: 10px;
                     font-weight: bold;
-                    min-width: 16px;
-                    max-width: 16px;
-                    min-height: 16px;
-                    max-height: 16px;
+                    min-width: 12px;
+                    max-width: 12px;
+                    min-height: 12px;
+                    max-height: 12px;
                 }
+
                 QTabBar::close-button::after {
                     content: "×";
                 }
+
                 QTabBar::close-button:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
+                    background: #35363a;
                     color: #ffffff;
                 }
+
                 QTabBar::close-button:pressed {
-                    background-color: rgba(255, 255, 255, 0.15);
-                    color: rgba(13, 110, 253, 0.9);
+                    background: #3c4043;
                 }
+                
                 QToolBar {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                    spacing: 8px;
-                    padding: 8px;
-                    border-radius: 16px;
-                    margin: 4px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    background: #202124;
+                    border-bottom: 1px solid #3c4043;
+                    spacing: 4px;
+                    padding: 2px;
                 }
+                
                 QToolButton {
-                    background-color: transparent;
+                    background: transparent;
                     border: none;
-                    padding: 8px;
-                    border-radius: 12px;
-                    color: rgba(255, 255, 255, 0.9);
-                    font-size: 14px;
+                    padding: 4px;
+                    border-radius: 4px;
+                    color: #9aa0a6;
                 }
+                
                 QToolButton:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
-                    color: rgba(13, 110, 253, 0.9);
-                }
-                QToolButton:pressed {
-                    background-color: rgba(255, 255, 255, 0.15);
-                }
-                QAction {
-                    color: rgba(255, 255, 255, 0.9);
-                    font-size: 14px;
-                    padding: 8px;
-                    border-radius: 12px;
-                }
-                QAction:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
-                    color: rgba(13, 110, 253, 0.9);
-                }
-                QAction:pressed {
-                    background-color: rgba(255, 255, 255, 0.15);
-                }
-                QLineEdit {
-                    padding: 10px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 16px;
-                    background-color: rgba(30, 30, 30, 0.75);
+                    background: #35363a;
                     color: #ffffff;
-                    selection-background-color: rgba(13, 110, 253, 0.9);
-                    selection-color: #ffffff;
+                }
+                
+                QToolButton:pressed {
+                    background: #3c4043;
+                }
+
+                QAction {
+                    color: #9aa0a6;
+                    padding: 4px;
+                    border-radius: 4px;
+                }
+
+                QAction:hover {
+                    background: #35363a;
+                    color: #ffffff;
+                }
+
+                QAction:pressed {
+                    background: #3c4043;
+                }
+                
+                QLineEdit {
+                    padding: 4px 12px;
+                    border: 1px solid #3c4043;
+                    border-radius: 20px;
+                    background: #292a2d;
+                    color: #ffffff;
+                    selection-background-color: #8ab4f8;
+                    selection-color: #202124;
                     font-size: 13px;
+                    min-height: 28px;
                 }
+                
                 QLineEdit:focus {
-                    border: 2px solid rgba(13, 110, 253, 0.9);
-                    padding: 9px;
+                    border: 1px solid #8ab4f8;
+                    background: #292a2d;
                 }
+                
                 QStatusBar {
-                    background-color: rgba(18, 18, 18, 0.85);
-                    color: rgba(255, 255, 255, 0.7);
-                    border-top: 1px solid rgba(255, 255, 255, 0.15);
+                    background: #202124;
+                    color: #9aa0a6;
+                    border-top: 1px solid #3c4043;
+                    padding: 2px;
+                    font-size: 11px;
+                }
+                
+                QMenu {
+                    background: #202124;
+                    border: 1px solid #3c4043;
+                    border-radius: 4px;
                     padding: 4px;
                 }
-                QMenu {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 16px;
-                    padding: 8px;
-                }
+                
                 QMenu::item {
-                    padding: 8px 24px;
-                    border-radius: 12px;
+                    padding: 6px 24px;
+                    border-radius: 4px;
                     margin: 2px 4px;
-                    color: rgba(255, 255, 255, 0.9);
+                    color: #9aa0a6;
                 }
+                
                 QMenu::item:selected {
-                    background-color: rgba(255, 255, 255, 0.1);
-                    color: rgba(13, 110, 253, 0.9);
+                    background: #35363a;
+                    color: #ffffff;
                 }
+                
                 QMenu::separator {
                     height: 1px;
-                    background-color: rgba(255, 255, 255, 0.15);
-                    margin: 6px 8px;
+                    background: #3c4043;
+                    margin: 4px 8px;
                 }
+                
                 QPushButton {
-                    background-color: rgba(13, 110, 253, 0.9);
-                    color: #ffffff;
+                    background: #8ab4f8;
+                    color: #202124;
                     border: none;
-                    padding: 8px 16px;
-                    border-radius: 12px;
+                    padding: 6px 12px;
+                    border-radius: 4px;
                     font-weight: 500;
+                    font-size: 12px;
                 }
+                
                 QPushButton:hover {
-                    background-color: rgba(13, 110, 253, 0.95);
+                    background: #93bbf9;
                 }
+                
                 QPushButton:pressed {
-                    background-color: rgba(13, 110, 253, 1);
+                    background: #7aa7f7;
                 }
+                
                 QPushButton:disabled {
-                    background-color: rgba(108, 117, 125, 0.75);
-                    color: rgba(255, 255, 255, 0.5);
+                    background: #3c4043;
+                    color: #9aa0a6;
                 }
+                
                 QScrollBar:vertical {
                     border: none;
-                    background-color: transparent;
-                    width: 10px;
+                    background: transparent;
+                    width: 8px;
                     margin: 0px;
                 }
+                
                 QScrollBar::handle:vertical {
-                    background-color: rgba(255, 255, 255, 0.2);
-                    border-radius: 5px;
+                    background: #3c4043;
+                    border-radius: 4px;
                     min-height: 20px;
                     margin: 2px;
                 }
+                
                 QScrollBar::handle:vertical:hover {
-                    background-color: rgba(255, 255, 255, 0.3);
+                    background: #4a4d51;
                 }
+                
                 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
                     height: 0px;
                 }
+                
                 QScrollBar:horizontal {
                     border: none;
-                    background-color: transparent;
-                    height: 10px;
+                    background: transparent;
+                    height: 8px;
                     margin: 0px;
                 }
+                
                 QScrollBar::handle:horizontal {
-                    background-color: rgba(255, 255, 255, 0.2);
-                    border-radius: 5px;
+                    background: #3c4043;
+                    border-radius: 4px;
                     min-width: 20px;
                     margin: 2px;
                 }
+                
                 QScrollBar::handle:horizontal:hover {
-                    background-color: rgba(255, 255, 255, 0.3);
+                    background: #4a4d51;
                 }
+                
                 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                     width: 0px;
                 }
+
                 QMenuBar {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    color: rgba(255, 255, 255, 0.9);
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                    padding: 4px;
+                    background: #202124;
+                    color: #9aa0a6;
+                    border-bottom: 1px solid #3c4043;
+                    padding: 2px;
                 }
+
                 QMenuBar::item {
-                    background-color: transparent;
-                    padding: 6px 12px;
-                    border-radius: 12px;
+                    background: transparent;
+                    padding: 4px 8px;
+                    border-radius: 4px;
                     margin: 2px;
                 }
+
                 QMenuBar::item:selected {
-                    background-color: rgba(255, 255, 255, 0.1);
+                    background: #35363a;
+                    color: #ffffff;
                 }
+
                 QMenuBar::item:pressed {
-                    background-color: rgba(255, 255, 255, 0.15);
+                    background: #3c4043;
                 }
+
                 QDialog {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    border-radius: 16px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    background: #202124;
+                    border-radius: 8px;
+                    border: 1px solid #3c4043;
                 }
+
                 QLabel {
-                    color: rgba(255, 255, 255, 0.9);
+                    color: #ffffff;
                 }
+
                 QCheckBox {
-                    color: rgba(255, 255, 255, 0.9);
+                    color: #ffffff;
                     spacing: 8px;
                 }
+
                 QCheckBox::indicator {
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 4px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 3px;
+                    border: 1px solid #3c4043;
                 }
+
                 QCheckBox::indicator:checked {
-                    background-color: rgba(13, 110, 253, 0.9);
-                    border: 1px solid rgba(13, 110, 253, 0.9);
+                    background: #8ab4f8;
+                    border: 1px solid #8ab4f8;
                 }
+
                 QComboBox {
-                    background-color: rgba(30, 30, 30, 0.75);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 12px;
-                    padding: 6px;
-                    color: rgba(255, 255, 255, 0.9);
+                    background: #292a2d;
+                    border: 1px solid #3c4043;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    color: #ffffff;
                     min-width: 6em;
                 }
+
                 QComboBox:hover {
-                    border: 1px solid rgba(13, 110, 253, 0.9);
+                    border: 1px solid #8ab4f8;
                 }
+
                 QComboBox::drop-down {
                     border: none;
                     width: 20px;
                 }
+
                 QComboBox::down-arrow {
                     image: none;
                     border: none;
+                }
+
+                #title_bar {
+                    background: #202124;
+                    border-radius: 8px 8px 0 0;
+                    border: 1px solid #3c4043;
+                    border-bottom: none;
+                    padding: 1px;
+                }
+
+                #title_bar QPushButton {
+                    background: transparent;
+                    border: none;
+                    color: #9aa0a6;
+                    font-size: 12px;
+                    padding: 2px;
+                    border-radius: 4px;
+                    min-width: 14px;
+                    max-width: 14px;
+                    min-height: 14px;
+                    max-height: 14px;
+                }
+
+                #title_bar QPushButton:hover {
+                    background: #35363a;
+                    color: #ffffff;
+                }
+
+                #title_bar QPushButton:pressed {
+                    background: #3c4043;
                 }
             """)
         else:
@@ -938,49 +1331,116 @@ class MainWindow(QMainWindow):
 
     def apply_style(self):
         # Set application font
-        app_font = QFont("Segoe UI", 10)
+        app_font = QFont("Segoe UI", 9)
         QApplication.setFont(app_font)
         
-        # Set global stylesheet with true glassmorphic style
+        # Set global stylesheet with VS Code-like dark theme
         self.setStyleSheet("""
             QMainWindow {
-                background-color: rgba(18, 18, 18, 0.85);
+                background: #1e1e1e;
+            }
+            
+            QWidget {
+                background: #1e1e1e;
+                color: #ffffff;
+            }
+            
+            #unified_toolbar {
+                background: #1e1e1e;
+                border-bottom: 1px solid #333333;
+            }
+            
+            #title_bar {
+                background: #1e1e1e;
+                border-bottom: 1px solid #333333;
+            }
+            
+            #title_bar QPushButton {
+                background: transparent;
+                border: none;
+                color: #cccccc;
+                font-size: 12px;
+                padding: 2px;
+                border-radius: 2px;
+            }
+            
+            #title_bar QPushButton:hover {
+                background: #2d2d2d;
+            }
+            
+            #title_bar QPushButton:pressed {
+                background: #3d3d3d;
+            }
+            
+            #nav_bar {
+                background: #1e1e1e;
+            }
+            
+            #nav_bar QPushButton {
+                background: transparent;
+                border: none;
+                color: #cccccc;
+                font-size: 13px;
+                padding: 4px;
+                border-radius: 4px;
+            }
+            
+            #nav_bar QPushButton:hover {
+                background: #2d2d2d;
+            }
+            
+            #nav_bar QPushButton:pressed {
+                background: #3d3d3d;
+            }
+            
+            QLineEdit {
+                padding: 4px 12px;
+                border: 1px solid #333333;
+                border-radius: 4px;
+                background: #2d2d2d;
+                color: #ffffff;
+                selection-background-color: #264f78;
+                selection-color: #ffffff;
+                font-size: 13px;
+                min-height: 24px;
+            }
+            
+            QLineEdit:focus {
+                border: 1px solid #007acc;
+                background: #2d2d2d;
             }
             
             QTabWidget::pane {
                 border: none;
-                background-color: rgba(30, 30, 30, 0.75);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                background: #1e1e1e;
             }
             
             QTabWidget::tab-bar {
                 alignment: left;
-                background-color: transparent;
-                left: 8px;
+                background: #1e1e1e;
+                left: 0px;
             }
             
             QTabBar::tab {
-                background-color: rgba(30, 30, 30, 0.75);
-                color: rgba(255, 255, 255, 0.9);
-                padding: 8px 20px;
-                margin-right: 2px;
-                border-top-left-radius: 16px;
-                border-top-right-radius: 16px;
-                min-width: 120px;
+                background: #2d2d2d;
+                color: #cccccc;
+                padding: 6px 16px;
+                margin-right: 1px;
+                border: none;
+                min-width: 100px;
                 max-width: 200px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-bottom: none;
+                font-size: 12px;
+                font-weight: 500;
             }
             
             QTabBar::tab:selected {
-                background-color: rgba(45, 45, 45, 0.85);
-                border-bottom: 2px solid rgba(13, 110, 253, 0.9);
+                background: #1e1e1e;
                 color: #ffffff;
+                border-top: 2px solid #007acc;
             }
             
             QTabBar::tab:hover {
-                background-color: rgba(40, 40, 40, 0.85);
+                background: #3d3d3d;
             }
 
             QTabBar::close-button {
@@ -989,15 +1449,15 @@ class MainWindow(QMainWindow):
                 border: none;
                 margin: 2px;
                 padding: 2px;
-                border-radius: 4px;
-                color: rgba(255, 255, 255, 0.6);
+                border-radius: 2px;
+                color: #cccccc;
                 font-family: "Segoe UI";
-                font-size: 12px;
+                font-size: 10px;
                 font-weight: bold;
-                min-width: 16px;
-                max-width: 16px;
-                min-height: 16px;
-                max-height: 16px;
+                min-width: 12px;
+                max-width: 12px;
+                min-height: 12px;
+                max-height: 12px;
             }
 
             QTabBar::close-button::after {
@@ -1005,145 +1465,78 @@ class MainWindow(QMainWindow):
             }
 
             QTabBar::close-button:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background: #3d3d3d;
                 color: #ffffff;
             }
 
             QTabBar::close-button:pressed {
-                background-color: rgba(255, 255, 255, 0.15);
-                color: rgba(13, 110, 253, 0.9);
-            }
-            
-            QToolBar {
-                background-color: rgba(30, 30, 30, 0.75);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                spacing: 8px;
-                padding: 8px;
-                border-radius: 16px;
-                margin: 4px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-            }
-            
-            QToolButton {
-                background-color: transparent;
-                border: none;
-                padding: 8px;
-                border-radius: 12px;
-                color: rgba(255, 255, 255, 0.9);
-                font-size: 14px;
-            }
-            
-            QToolButton:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: rgba(13, 110, 253, 0.9);
-            }
-            
-            QToolButton:pressed {
-                background-color: rgba(255, 255, 255, 0.15);
-            }
-
-            QAction {
-                color: rgba(255, 255, 255, 0.9);
-                font-size: 14px;
-                padding: 8px;
-                border-radius: 12px;
-            }
-
-            QAction:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: rgba(13, 110, 253, 0.9);
-            }
-
-            QAction:pressed {
-                background-color: rgba(255, 255, 255, 0.15);
-            }
-            
-            QLineEdit {
-                padding: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 16px;
-                background-color: rgba(30, 30, 30, 0.75);
-                color: #ffffff;
-                selection-background-color: rgba(13, 110, 253, 0.9);
-                selection-color: #ffffff;
-                font-size: 13px;
-            }
-            
-            QLineEdit:focus {
-                border: 2px solid rgba(13, 110, 253, 0.9);
-                padding: 9px;
-            }
-            
-            QStatusBar {
-                background-color: rgba(18, 18, 18, 0.85);
-                color: rgba(255, 255, 255, 0.7);
-                border-top: 1px solid rgba(255, 255, 255, 0.15);
-                padding: 4px;
+                background: #4d4d4d;
             }
             
             QMenu {
-                background-color: rgba(30, 30, 30, 0.75);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 16px;
-                padding: 8px;
+                background: #1e1e1e;
+                border: 1px solid #333333;
+                border-radius: 4px;
+                padding: 4px;
             }
             
             QMenu::item {
-                padding: 8px 24px;
-                border-radius: 12px;
+                padding: 6px 24px;
+                border-radius: 4px;
                 margin: 2px 4px;
-                color: rgba(255, 255, 255, 0.9);
+                color: #ffffff;
             }
             
             QMenu::item:selected {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: rgba(13, 110, 253, 0.9);
+                background: #2d2d2d;
+                color: #ffffff;
             }
             
             QMenu::separator {
                 height: 1px;
-                background-color: rgba(255, 255, 255, 0.15);
-                margin: 6px 8px;
+                background: #333333;
+                margin: 4px 8px;
             }
             
-            QPushButton {
-                background-color: rgba(13, 110, 253, 0.9);
+            QMenuBar {
+                background: #1e1e1e;
+                color: #cccccc;
+                border-bottom: 1px solid #333333;
+                padding: 2px;
+            }
+
+            QMenuBar::item {
+                background: transparent;
+                padding: 4px 8px;
+                border-radius: 4px;
+                margin: 2px;
+            }
+
+            QMenuBar::item:selected {
+                background: #2d2d2d;
                 color: #ffffff;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 12px;
-                font-weight: 500;
             }
-            
-            QPushButton:hover {
-                background-color: rgba(13, 110, 253, 0.95);
+
+            QMenuBar::item:pressed {
+                background: #3d3d3d;
             }
-            
-            QPushButton:pressed {
-                background-color: rgba(13, 110, 253, 1);
-            }
-            
-            QPushButton:disabled {
-                background-color: rgba(108, 117, 125, 0.75);
-                color: rgba(255, 255, 255, 0.5);
-            }
-            
+
             QScrollBar:vertical {
                 border: none;
-                background-color: transparent;
-                width: 10px;
+                background: #1e1e1e;
+                width: 8px;
                 margin: 0px;
             }
             
             QScrollBar::handle:vertical {
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 5px;
+                background: #3d3d3d;
+                border-radius: 4px;
                 min-height: 20px;
                 margin: 2px;
             }
             
             QScrollBar::handle:vertical:hover {
-                background-color: rgba(255, 255, 255, 0.3);
+                background: #4d4d4d;
             }
             
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
@@ -1152,145 +1545,201 @@ class MainWindow(QMainWindow):
             
             QScrollBar:horizontal {
                 border: none;
-                background-color: transparent;
-                height: 10px;
+                background: #1e1e1e;
+                height: 8px;
                 margin: 0px;
             }
             
             QScrollBar::handle:horizontal {
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 5px;
+                background: #3d3d3d;
+                border-radius: 4px;
                 min-width: 20px;
                 margin: 2px;
             }
             
             QScrollBar::handle:horizontal:hover {
-                background-color: rgba(255, 255, 255, 0.3);
+                background: #4d4d4d;
             }
             
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                 width: 0px;
             }
 
-            QMenuBar {
-                background-color: rgba(30, 30, 30, 0.75);
-                color: rgba(255, 255, 255, 0.9);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-                padding: 4px;
-            }
-
-            QMenuBar::item {
-                background-color: transparent;
-                padding: 6px 12px;
-                border-radius: 12px;
-                margin: 2px;
-            }
-
-            QMenuBar::item:selected {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-
-            QMenuBar::item:pressed {
-                background-color: rgba(255, 255, 255, 0.15);
-            }
-
             QDialog {
-                background-color: rgba(30, 30, 30, 0.75);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                background: #1e1e1e;
+                border-radius: 8px;
+                border: 1px solid #333333;
             }
 
-            QLabel {
-                color: rgba(255, 255, 255, 0.9);
+            QDialog QLabel {
+                color: #ffffff;
             }
 
-            QCheckBox {
-                color: rgba(255, 255, 255, 0.9);
-                spacing: 8px;
-            }
-
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
+            QDialog QPushButton {
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #333333;
+                padding: 6px 12px;
                 border-radius: 4px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
             }
 
-            QCheckBox::indicator:checked {
-                background-color: rgba(13, 110, 253, 0.9);
-                border: 1px solid rgba(13, 110, 253, 0.9);
+            QDialog QPushButton:hover {
+                background: #3d3d3d;
             }
 
-            QComboBox {
-                background-color: rgba(30, 30, 30, 0.75);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 12px;
-                padding: 6px;
-                color: rgba(255, 255, 255, 0.9);
-                min-width: 6em;
+            QDialog QPushButton:pressed {
+                background: #4d4d4d;
             }
 
-            QComboBox:hover {
-                border: 1px solid rgba(13, 110, 253, 0.9);
+            QMessageBox {
+                background: #1e1e1e;
             }
 
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
+            QMessageBox QLabel {
+                color: #ffffff;
             }
 
-            QComboBox::down-arrow {
-                image: none;
-                border: none;
+            QMessageBox QPushButton {
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #333333;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+
+            QMessageBox QPushButton:hover {
+                background: #3d3d3d;
+            }
+
+            QMessageBox QPushButton:pressed {
+                background: #4d4d4d;
+            }
+
+            QInputDialog {
+                background: #1e1e1e;
+            }
+
+            QInputDialog QLabel {
+                color: #ffffff;
+            }
+
+            QInputDialog QLineEdit {
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #333333;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+
+            QInputDialog QPushButton {
+                background: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #333333;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+
+            QInputDialog QPushButton:hover {
+                background: #3d3d3d;
+            }
+
+            QInputDialog QPushButton:pressed {
+                background: #4d4d4d;
             }
         """)
 
-    def create_navigation_toolbar(self):
-        nav_toolbar = QToolBar("Navigation")
-        nav_toolbar.setIconSize(QSize(20, 20))
-        nav_toolbar.setMovable(False)
-        self.addToolBar(nav_toolbar)
+    def create_unified_toolbar(self):
+        toolbar = QWidget()
+        toolbar.setObjectName("unified_toolbar")
+        layout = QVBoxLayout(toolbar)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         
-        # Create actions with better icons
-        back_action = QAction("◀", self)
-        back_action.setStatusTip("Go back to previous page")
-        back_action.triggered.connect(self.navigate_back)
-        nav_toolbar.addAction(back_action)
+        # Title bar
+        title_bar = QWidget()
+        title_bar.setObjectName("title_bar")
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(8, 4, 8, 4)
         
-        forward_action = QAction("▶", self)
-        forward_action.setStatusTip("Go forward to next page")
-        forward_action.triggered.connect(self.navigate_forward)
-        nav_toolbar.addAction(forward_action)
+        # Window title
+        title_label = QLabel(APP_NAME)
+        title_label.setStyleSheet("color: #cccccc; font-size: 12px;")
+        title_layout.addWidget(title_label)
         
-        reload_action = QAction("⟳", self)
-        reload_action.setStatusTip("Reload current page")
-        reload_action.triggered.connect(self.reload_page)
-        nav_toolbar.addAction(reload_action)
+        # Window controls
+        minimize_btn = QPushButton("—")
+        minimize_btn.setFixedSize(14, 14)
+        minimize_btn.clicked.connect(self.showMinimized)
         
-        home_action = QAction("🏠", self)
-        home_action.setStatusTip("Go to homepage")
-        home_action.triggered.connect(self.navigate_home)
-        nav_toolbar.addAction(home_action)
+        maximize_btn = QPushButton("□")
+        maximize_btn.setFixedSize(14, 14)
+        maximize_btn.clicked.connect(self.toggle_maximize)
         
-        # Add new tab button next to home icon
-        new_tab_action = QAction("+", self)
-        new_tab_action.setStatusTip("New Tab (Ctrl+T)")
-        new_tab_action.triggered.connect(self.add_new_tab)
-        nav_toolbar.addAction(new_tab_action)
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(14, 14)
+        close_btn.clicked.connect(self.close)
         
-        # Add some spacing
-        spacer = QWidget()
-        spacer.setFixedWidth(12)
-        nav_toolbar.addWidget(spacer)
+        title_layout.addWidget(minimize_btn)
+        title_layout.addWidget(maximize_btn)
+        title_layout.addWidget(close_btn)
         
-        # URL bar with better styling
+        layout.addWidget(title_bar)
+        
+        # Navigation bar
+        nav_bar = QWidget()
+        nav_bar.setObjectName("nav_bar")
+        nav_layout = QHBoxLayout(nav_bar)
+        nav_layout.setContentsMargins(8, 4, 8, 4)
+        
+        # Navigation buttons
+        back_btn = QPushButton("←")
+        back_btn.setFixedSize(24, 24)
+        back_btn.clicked.connect(self.navigate_back)
+        
+        forward_btn = QPushButton("→")
+        forward_btn.setFixedSize(24, 24)
+        forward_btn.clicked.connect(self.navigate_forward)
+        
+        reload_btn = QPushButton("↻")
+        reload_btn.setFixedSize(24, 24)
+        reload_btn.clicked.connect(self.reload_page)
+        
+        home_btn = QPushButton("⌂")
+        home_btn.setFixedSize(24, 24)
+        home_btn.clicked.connect(self.navigate_home)
+        
+        new_tab_btn = QPushButton("+")
+        new_tab_btn.setFixedSize(24, 24)
+        new_tab_btn.clicked.connect(self.add_new_tab)
+        
+        # Loading indicator
+        self.loading_label = QLabel()
+        self.loading_label.setFixedSize(16, 16)
+        self.loading_label.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                color: #007acc;
+            }
+        """)
+        self.loading_label.hide()
+        
+        # URL bar
         self.urlbar = QLineEdit()
+        self.urlbar.setPlaceholderText("Search Google or enter URL")
         self.urlbar.returnPressed.connect(self.navigate_to_url)
-        self.urlbar.setPlaceholderText("Search or enter website name")
-        self.urlbar.setMinimumHeight(36)
-        nav_toolbar.addWidget(self.urlbar)
         
-        return nav_toolbar
+        # Add widgets to navigation layout
+        nav_layout.addWidget(back_btn)
+        nav_layout.addWidget(forward_btn)
+        nav_layout.addWidget(reload_btn)
+        nav_layout.addWidget(home_btn)
+        nav_layout.addWidget(new_tab_btn)
+        nav_layout.addWidget(self.loading_label)
+        nav_layout.addWidget(self.urlbar)
+        
+        layout.addWidget(nav_bar)
+        
+        return toolbar
 
     def center_on_screen(self):
         # Center the window on the screen
@@ -1369,8 +1818,11 @@ class MainWindow(QMainWindow):
         # Connect signals for title and URL updates
         tab.webview.titleChanged.connect(lambda title, browser_tab=tab: self.update_tab_title(browser_tab, title))
         tab.webview.urlChanged.connect(lambda qurl, browser_tab=tab: self.update_urlbar(qurl, browser_tab))
-        tab.webview.loadStarted.connect(lambda: self.statusBar.showMessage("Loading..."))
-        tab.webview.loadFinished.connect(lambda: self.statusBar.showMessage("Ready", 3000))
+        
+        # Connect loading signals
+        tab.webview.loadStarted.connect(self.start_loading)
+        tab.webview.loadFinished.connect(self.stop_loading)
+        tab.webview.loadProgress.connect(self.update_loading_progress)
         
         # Now navigate to the URL
         tab.navigate(url)
@@ -1410,6 +1862,47 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(current - 1)
         else:
             self.tabs.setCurrentIndex(self.tabs.count() - 1)  # Wrap around to last tab
+
+    def start_loading(self):
+        self.loading_label.setText("⟳")
+        self.loading_label.show()
+        self.start_loading_animation()
+
+    def stop_loading(self):
+        self.loading_label.setText("✓")
+        self.loading_label.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                color: #4CAF50;
+            }
+        """)
+        QTimer.singleShot(1000, self.loading_label.hide)
+
+    def update_loading_progress(self, progress):
+        if progress < 100:
+            self.loading_label.setText("⟳")
+            self.loading_label.setStyleSheet("""
+                QLabel {
+                    background: transparent;
+                    color: #007acc;
+                }
+            """)
+
+    def start_loading_animation(self):
+        self.loading_angle = 0
+        self.loading_timer = QTimer()
+        self.loading_timer.timeout.connect(self.rotate_loading_icon)
+        self.loading_timer.start(50)  # Update every 50ms
+
+    def rotate_loading_icon(self):
+        self.loading_angle = (self.loading_angle + 30) % 360
+        self.loading_label.setStyleSheet(f"""
+            QLabel {{
+                background: transparent;
+                color: #007acc;
+                transform: rotate({self.loading_angle}deg);
+            }}
+        """)
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
