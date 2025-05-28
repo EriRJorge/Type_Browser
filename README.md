@@ -1,5 +1,82 @@
-# TypeBrowser
-First Official Open Source Product of Type_Software.  TypeBrowser is a lightweight, privacy-focused web browser built with Python.
+# Type Browser
+
+A lightweight, privacy-focused personal web browser built with Python and PyQt5.
+
+## Features
+
+- Modern and clean user interface
+- Tabbed browsing
+- Bookmarks management
+- Browsing history
+- Download manager
+- Settings and preferences
+- Dark/Light theme support
+- Keyboard shortcuts
+- Context menu
+- Full-screen mode
+- Zoom controls
+- Find in page
+- Save page as
+- View page source
+- Inspect element
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/Type_Browser.git
+cd Type_Browser
+```
+
+2. Install the required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+Run the browser:
+```bash
+python TypeBrowser.py
+```
+
+### Keyboard Shortcuts
+
+- `Ctrl+T`: New tab
+- `Ctrl+W`: Close tab
+- `Ctrl+R`: Reload page
+- `Ctrl+L`: Focus URL bar
+- `Ctrl+B`: Toggle bookmark
+- `Ctrl+H`: Show history
+- `Ctrl+,`: Show settings
+- `Ctrl+F`: Find in page
+- `Ctrl++`: Zoom in
+- `Ctrl+-`: Zoom out
+- `Ctrl+0`: Reset zoom
+- `F11`: Toggle fullscreen
+- `Ctrl+N`: New window
+- `Ctrl+S`: Save page
+- `Ctrl+Z`: Undo
+- `Ctrl+Y`: Redo
+- `Ctrl+X`: Cut
+- `Ctrl+C`: Copy
+- `Ctrl+V`: Paste
+- `Alt+Left`: Back
+- `Alt+Right`: Forward
+
+## Data Storage
+
+Browser data (bookmarks, history, settings) is stored in the following location:
+- Windows: `%USERPROFILE%\.type_browser`
+- Linux/Mac: `~/.type_browser`
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
