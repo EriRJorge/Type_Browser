@@ -1,6 +1,6 @@
 [Setup]
 AppName=Type Browser
-AppVersion=1.1.0
+AppVersion=1.2.0
 DefaultDirName={pf}\Type Browser
 DefaultGroupName=Type Browser
 UninstallDisplayIcon={app}\icon.png

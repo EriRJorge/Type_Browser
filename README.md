@@ -1,129 +1,77 @@
 # Type Browser
 
-A lightweight, privacy-focused personal web browser built with Python and PyQt5.
+Type Browser is a lightweight desktop browser built with Python, PyQt5, and
+Qt WebEngine. It provides a familiar tabbed browsing experience with a
+modern dark interface, persistent bookmarks and history, downloads, zoom
+controls, private-by-default permissions, and useful keyboard shortcuts.
 
 ## Features
 
-- Modern and clean user interface
-- Tabbed browsing
-- Bookmarks management
-- Browsing history
-- Download manager
-- Settings and preferences
-- Dark/Light theme support
-- Keyboard shortcuts
-- Context menu
-- Full-screen mode
-- Zoom controls
-- Find in page
-- Save page as
-- View page source
-- Inspect element
+- Chrome-style tabs and address bar with URL and web search support
+- Back, forward, reload, home, fullscreen, and new-tab controls
+- Bookmarks, browsing history, downloads, and configurable preferences
+- Dark and light themes, page zoom, find-in-page, save page, and dev tools
+- Persistent Chromium cache and browser data under the user's profile
+- Web notifications, camera, microphone, geolocation, and screen capture
+  denied by default
 
-## Installation
+## Requirements
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/Type_Browser.git
+- Windows 10 or later (64-bit recommended)
+- Python 3.8 or newer
+- PyQt5 5.15 or newer
+- PyQtWebEngine 5.15 or newer
+
+## Development setup
+
+```powershell
+git clone https://github.com/EriRJorge/Type_Browser.git
 cd Type_Browser
-```
-
-2. Install the required dependencies:
-```bash
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-## Usage
-
-Run the browser:
-```bash
 python TypeBrowser.py
 ```
 
-### Keyboard Shortcuts
+If PowerShell execution policy prevents activation, run the interpreter
+directly with `.venv\Scripts\python.exe TypeBrowser.py`.
 
-- `Ctrl+T`: New tab
-- `Ctrl+W`: Close tab
-- `Ctrl+R`: Reload page
-- `Ctrl+L`: Focus URL bar
-- `Ctrl+B`: Toggle bookmark
-- `Ctrl+H`: Show history
-- `Ctrl+,`: Show settings
-- `Ctrl+F`: Find in page
-- `Ctrl++`: Zoom in
-- `Ctrl+-`: Zoom out
-- `Ctrl+0`: Reset zoom
-- `F11`: Toggle fullscreen
-- `Ctrl+N`: New window
-- `Ctrl+S`: Save page
-- `Ctrl+Z`: Undo
-- `Ctrl+Y`: Redo
-- `Ctrl+X`: Cut
-- `Ctrl+C`: Copy
-- `Ctrl+V`: Paste
-- `Alt+Left`: Back
-- `Alt+Right`: Forward
+## Building for Windows
 
-## Data Storage
+Build a standalone executable with:
 
-Browser data (bookmarks, history, settings) is stored in the following location:
-- Windows: `%USERPROFILE%\.type_browser`
-- Linux/Mac: `~/.type_browser`
+```powershell
+python build_robust.py
+```
 
-## Contributing
+The Inno Setup definition in `Type_Browser.iss` can package the resulting
+`dist\Type_Browser.exe` into an installer. Test the executable on a clean
+Windows machine before distributing it.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+T` | New tab |
+| `Ctrl+W` | Close tab |
+| `Ctrl+L` | Focus address bar |
+| `Ctrl+R` | Reload |
+| `Ctrl+B` | Toggle bookmark |
+| `Ctrl+H` | History |
+| `Ctrl+,` | Settings |
+| `Ctrl+F` | Find in page |
+| `Ctrl++` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset |
+| `Alt+Left` / `Alt+Right` | Back / forward |
+| `F11` | Toggle fullscreen |
+| `Ctrl+Q` | Exit |
+
+## User data
+
+Bookmarks, history, and settings are stored in `.type_browser` in the user's
+home directory. Chromium cache and persistent web storage are kept separately
+so browsing data survives application updates.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-**TypeBrowser** is a lightweight, privacy-focused web browser built with Python and PyQt5. It offers a user-friendly interface with tabbed browsing, navigation features, and a customizable home page. This project focuses on simplicity and privacy, providing basic web browsing functionalities with minimal distractions.
-
-## Features
-- **Tabbed Browsing**: Open multiple websites in separate tabs.
-- **Navigation Toolbar**: Includes back, forward, reload, and home buttons for easy navigation.
-- **URL Bar**: A dynamic URL bar to display and navigate to websites.
-- **Customizable Home Page**: Set a default homepage (Google is set by default).
-- **Download Interception**: Placeholder functionality for handling download requests.
-- **Permission Handling**: Simplified permissions for web page features (useful for handling media requests).
-- **About Dialog**: Display information about the app, including its version and a brief description.
-
-## Installation
-To run this application, you need Python 3.x and the following libraries:
-
-- PyQt5
-- PyQtWebEngine
-
-### Step-by-step installation:
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/TypeBrowser.git
-   ```
-
-2. Install the dependencies:
-   ```bash
-   pip install PyQt5 PyQtWebEngine
-   ```
-
-3. Run the application:
-   ```bash
-   python type_browser.py
-   ```
-
-## Usage
-- **New Tab**: Open a new tab using the **Ctrl+T** keyboard shortcut.
-- **Close Tab**: Close the current tab with **Ctrl+W**.
-- **Navigate**: Type a URL in the address bar and press **Enter** to navigate to it.
-- **Back/Forward**: Use the back and forward buttons to navigate through your browsing history.
-- **Reload**: Reload the current page using **Ctrl+R** or the reload button.
-
-## Keyboard Shortcuts
-- **Ctrl+T**: Open a new tab.
-- **Ctrl+W**: Close the current tab.
-- **Ctrl+R**: Reload the current page.
-- **Ctrl+Q**: Exit the browser.
-
- 
+This project is licensed under the [MIT License](LICENSE.txt).

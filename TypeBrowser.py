@@ -9,6 +9,7 @@
 
 import sys
 import os
+from urllib.parse import quote_plus
 from PyQt5.QtCore import QUrl, Qt, QSize, QTimer, QSettings
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QToolBar, QAction, 
                             QLineEdit, QTabWidget, QWidget, QVBoxLayout, 
@@ -25,8 +26,10 @@ from about_dialog import AboutDialog
 from bookmark_manager import BookmarkDialog
 from shortcuts_dialog import ShortcutsDialog
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 APP_NAME = "Type_Browser"
+HOME_PAGE = "https://typesearch.click/"
+SEARCH_ENGINE = "https://www.google.com/search?q="
 
 class RequestInterceptor(QWebEngineUrlRequestInterceptor):
     def __init__(self, parent=None):
@@ -174,14 +177,14 @@ class WebPage(QWebEnginePage):
         settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
         settings.setAttribute(QWebEngineSettings.FocusOnNavigationEnabled, True)
         settings.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, True)
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.ScreenCaptureEnabled, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, False)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, False)
+        settings.setAttribute(QWebEngineSettings.ScreenCaptureEnabled, False)
         settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)
-        settings.setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
+        settings.setAttribute(QWebEngineSettings.SpatialNavigationEnabled, False)
         settings.setAttribute(QWebEngineSettings.LinksIncludedInFocusChain, True)
-        settings.setAttribute(QWebEngineSettings.AllowGeolocationOnInsecureOrigins, True)
-        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+        settings.setAttribute(QWebEngineSettings.AllowGeolocationOnInsecureOrigins, False)
+        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, False)
         settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
         
         # Modern Web Features
@@ -202,10 +205,6 @@ class WebPage(QWebEnginePage):
         
         # Set additional headers for modern web compatibility
         self.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
-        
-        # Set up request interceptor for Cloudflare
-        self.request_interceptor = RequestInterceptor()
-        self.profile().setUrlRequestInterceptor(self.request_interceptor)
         
         # Inject modern web features and error handling
         self.loadFinished.connect(self.inject_modern_features)
@@ -298,23 +297,6 @@ class WebPage(QWebEnginePage):
                         });
                     }, 1000);
                 });
-                
-                // Modern web features detection
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-                }
-                
-                // Enable modern web features
-                if ('Notification' in window) {
-                    Notification.requestPermission();
-                }
-                
-                // Enable modern storage features
-                if ('localStorage' in window) {
-                    window.localStorage.setItem('browser_support', 'modern');
-                }
                 
                 // Enable modern graphics features
                 if ('WebGL2RenderingContext' in window) {
@@ -537,21 +519,13 @@ class BrowserTab(QWidget):
             url = url.toString()
             
         url_str = str(url)
-        
-        # If it's the default URL, load it directly
-        if url_str == "https://typesearch.click/":
-            self.webview.load(QUrl(url_str))
-            return
-            
-        # For other URLs, handle search and protocol
-        if not url_str.startswith('http'):
-            if '.' in url_str and ' ' not in url_str:
-                url_str = 'https://' + url_str
-            elif url_str and url_str != "False":  # Only add search query if not empty and not "False"
-                url_str = f'https://www.google.com/search?q={url_str}'
-            else:
-                url_str = "https://typesearch.click/"
-        
+        if not url_str.strip():
+            url_str = HOME_PAGE
+        elif " " in url_str.strip() or not QUrl.fromUserInput(url_str).scheme():
+            url_str = f"{SEARCH_ENGINE}{quote_plus(url_str.strip())}"
+        else:
+            url_str = QUrl.fromUserInput(url_str).toString()
+
         self.webview.load(QUrl(url_str))
         
     def refresh(self):
@@ -584,10 +558,6 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon("icon.png"))
         self.setMinimumSize(1024, 768)
         
-        # Enable window transparency
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        
         # Initialize browser data
         self.browser_data = BrowserData()
         
@@ -603,9 +573,9 @@ class MainWindow(QMainWindow):
         self.tabs.tabCloseRequested.connect(self.close_tab)
         self.tabs.currentChanged.connect(self.tab_changed)
         self.tabs.setDocumentMode(True)
-        
-        # Remove the corner widget (new tab button)
-        self.tabs.setCornerWidget(None)
+        self.tabs.setMovable(True)
+        self.tabs.setElideMode(Qt.ElideRight)
+        self.tabs.setCornerWidget(self.create_new_tab_button(), Qt.TopRightCorner)
         
         # Create a central widget with a layout
         central_widget = QWidget()
@@ -633,21 +603,7 @@ class MainWindow(QMainWindow):
         # Center the window on screen
         self.center_on_screen()
 
-        # Enable window dragging
-        self.old_pos = None
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.old_pos = event.globalPos()
-
-    def mouseMoveEvent(self, event):
-        if self.old_pos:
-            delta = event.globalPos() - self.old_pos
-            self.move(self.pos() + delta)
-            self.old_pos = event.globalPos()
-
-    def mouseReleaseEvent(self, event):
-        self.old_pos = None
+        self.apply_settings()
 
     def toggle_maximize(self):
         if self.isMaximized():
@@ -1655,36 +1611,6 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Title bar
-        title_bar = QWidget()
-        title_bar.setObjectName("title_bar")
-        title_layout = QHBoxLayout(title_bar)
-        title_layout.setContentsMargins(8, 4, 8, 4)
-        
-        # Window title
-        title_label = QLabel(APP_NAME)
-        title_label.setStyleSheet("color: #cccccc; font-size: 12px;")
-        title_layout.addWidget(title_label)
-        
-        # Window controls
-        minimize_btn = QPushButton("—")
-        minimize_btn.setFixedSize(14, 14)
-        minimize_btn.clicked.connect(self.showMinimized)
-        
-        maximize_btn = QPushButton("□")
-        maximize_btn.setFixedSize(14, 14)
-        maximize_btn.clicked.connect(self.toggle_maximize)
-        
-        close_btn = QPushButton("×")
-        close_btn.setFixedSize(14, 14)
-        close_btn.clicked.connect(self.close)
-        
-        title_layout.addWidget(minimize_btn)
-        title_layout.addWidget(maximize_btn)
-        title_layout.addWidget(close_btn)
-        
-        layout.addWidget(title_bar)
-        
         # Navigation bar
         nav_bar = QWidget()
         nav_bar.setObjectName("nav_bar")
@@ -1735,11 +1661,19 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(home_btn)
         nav_layout.addWidget(new_tab_btn)
         nav_layout.addWidget(self.loading_label)
-        nav_layout.addWidget(self.urlbar)
+        nav_layout.addWidget(self.urlbar, 1)
         
         layout.addWidget(nav_bar)
         
         return toolbar
+
+    def create_new_tab_button(self):
+        button = QPushButton("+")
+        button.setObjectName("new_tab_button")
+        button.setToolTip("Open a new tab (Ctrl+T)")
+        button.setFixedSize(32, 28)
+        button.clicked.connect(self.add_new_tab)
+        return button
 
     def center_on_screen(self):
         # Center the window on the screen
@@ -1800,16 +1734,15 @@ class MainWindow(QMainWindow):
     
     def navigate_home(self):
         if self.tabs.currentWidget():
-            self.tabs.currentWidget().navigate("https://typesearch.click/") 
+            self.tabs.currentWidget().navigate(HOME_PAGE)
     
     def focus_url_bar(self):
         self.urlbar.selectAll()
         self.urlbar.setFocus()
 
     def add_new_tab(self, url=None):
-        # Always use typesearch.click as the default URL
         if url is None:
-            url = "https://typesearch.click/"
+            url = self.browser_data.get_setting("homepage", HOME_PAGE)
             
         tab = BrowserTab(self)
         index = self.tabs.addTab(tab, "New Tab")
@@ -1866,9 +1799,14 @@ class MainWindow(QMainWindow):
     def start_loading(self):
         self.loading_label.setText("⟳")
         self.loading_label.show()
-        self.start_loading_animation()
+        if not hasattr(self, "loading_timer"):
+            self.loading_timer = QTimer(self)
+            self.loading_timer.timeout.connect(self.rotate_loading_icon)
+        self.loading_timer.start(80)
 
     def stop_loading(self):
+        if hasattr(self, "loading_timer"):
+            self.loading_timer.stop()
         self.loading_label.setText("✓")
         self.loading_label.setStyleSheet("""
             QLabel {
@@ -1890,9 +1828,6 @@ class MainWindow(QMainWindow):
 
     def start_loading_animation(self):
         self.loading_angle = 0
-        self.loading_timer = QTimer()
-        self.loading_timer.timeout.connect(self.rotate_loading_icon)
-        self.loading_timer.start(50)  # Update every 50ms
 
     def rotate_loading_icon(self):
         self.loading_angle = (self.loading_angle + 30) % 360
@@ -1938,8 +1873,8 @@ def main():
     settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
     settings.setAttribute(QWebEngineSettings.FocusOnNavigationEnabled, True)
     settings.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, True)
-    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, False)
+    settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, False)
     settings.setAttribute(QWebEngineSettings.ScreenCaptureEnabled, True)
     settings.setAttribute(QWebEngineSettings.ShowScrollBars, True)
     settings.setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
