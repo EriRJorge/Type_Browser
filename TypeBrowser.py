@@ -576,7 +576,6 @@ class MainWindow(QMainWindow):
         self.tabs.setDocumentMode(True)
         self.tabs.setMovable(True)
         self.tabs.setElideMode(Qt.ElideRight)
-        self.tabs.setCornerWidget(self.create_new_tab_button(), Qt.TopRightCorner)
         
         # Create a central widget with a layout
         central_widget = QWidget()
@@ -1687,6 +1686,8 @@ class MainWindow(QMainWindow):
         home_btn.clicked.connect(self.navigate_home)
         
         new_tab_btn = QPushButton("+")
+        new_tab_btn.setObjectName("toolbar_button")
+        new_tab_btn.setToolTip("Open a new tab (Ctrl+T)")
         new_tab_btn.setFixedSize(24, 24)
         new_tab_btn.clicked.connect(self.add_new_tab)
         
