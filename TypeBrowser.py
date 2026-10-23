@@ -28,7 +28,7 @@ from shortcuts_dialog import ShortcutsDialog
 
 VERSION = "1.2.0"
 APP_NAME = "Type_Browser"
-HOME_PAGE = "https://typesearch.click/"
+HOME_PAGE = "https://search.typesoftware.online/"
 SEARCH_ENGINE = "https://www.google.com/search?q="
 
 class RequestInterceptor(QWebEngineUrlRequestInterceptor):
@@ -563,6 +563,7 @@ class MainWindow(QMainWindow):
         
         # Initialize download manager
         self.download_manager = DownloadManager(self)
+        self.loading_angle = 0
         
         # Set application style
         self.apply_style()
@@ -992,7 +993,6 @@ class MainWindow(QMainWindow):
                 }
 
                 QTabBar::close-button::after {
-                    content: "×";
                 }
 
                 QTabBar::close-button:hover {
@@ -1331,6 +1331,14 @@ class MainWindow(QMainWindow):
             #nav_bar {
                 background: #1e1e1e;
             }
+
+            #brand_label {
+                color: #3794ff;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 1px;
+                padding: 0 8px 0 2px;
+            }
             
             #nav_bar QPushButton {
                 background: transparent;
@@ -1352,7 +1360,7 @@ class MainWindow(QMainWindow):
             QLineEdit {
                 padding: 4px 12px;
                 border: 1px solid #333333;
-                border-radius: 4px;
+                border-radius: 6px;
                 background: #2d2d2d;
                 color: #ffffff;
                 selection-background-color: #264f78;
@@ -1363,7 +1371,13 @@ class MainWindow(QMainWindow):
             
             QLineEdit:focus {
                 border: 1px solid #007acc;
-                background: #2d2d2d;
+                background: #252526;
+            }
+
+            #url_bar {
+                min-height: 28px;
+                padding-left: 14px;
+                padding-right: 14px;
             }
             
             QTabWidget::pane {
@@ -1380,10 +1394,10 @@ class MainWindow(QMainWindow):
             QTabBar::tab {
                 background: #2d2d2d;
                 color: #cccccc;
-                padding: 6px 16px;
+                padding: 7px 18px;
                 margin-right: 1px;
                 border: none;
-                min-width: 100px;
+                min-width: 120px;
                 max-width: 200px;
                 font-size: 12px;
                 font-weight: 500;
@@ -1392,7 +1406,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab:selected {
                 background: #1e1e1e;
                 color: #ffffff;
-                border-top: 2px solid #007acc;
+                border-top: 2px solid #3794ff;
             }
             
             QTabBar::tab:hover {
@@ -1417,7 +1431,6 @@ class MainWindow(QMainWindow):
             }
 
             QTabBar::close-button::after {
-                content: "×";
             }
 
             QTabBar::close-button:hover {
@@ -1616,6 +1629,10 @@ class MainWindow(QMainWindow):
         nav_bar.setObjectName("nav_bar")
         nav_layout = QHBoxLayout(nav_bar)
         nav_layout.setContentsMargins(8, 4, 8, 4)
+        brand_label = QLabel("TYPE BROWSER")
+        brand_label.setObjectName("brand_label")
+        brand_label.setToolTip("Type Browser")
+        nav_layout.addWidget(brand_label)
         
         # Navigation buttons
         back_btn = QPushButton("←")
@@ -1651,10 +1668,12 @@ class MainWindow(QMainWindow):
         
         # URL bar
         self.urlbar = QLineEdit()
+        self.urlbar.setObjectName("url_bar")
         self.urlbar.setPlaceholderText("Search Google or enter URL")
         self.urlbar.returnPressed.connect(self.navigate_to_url)
         
         # Add widgets to navigation layout
+        nav_layout.addSpacing(6)
         nav_layout.addWidget(back_btn)
         nav_layout.addWidget(forward_btn)
         nav_layout.addWidget(reload_btn)
@@ -1831,13 +1850,7 @@ class MainWindow(QMainWindow):
 
     def rotate_loading_icon(self):
         self.loading_angle = (self.loading_angle + 30) % 360
-        self.loading_label.setStyleSheet(f"""
-            QLabel {{
-                background: transparent;
-                color: #007acc;
-                transform: rotate({self.loading_angle}deg);
-            }}
-        """)
+        self.loading_label.setText(("⟳" if self.loading_angle < 180 else "⟲"))
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """

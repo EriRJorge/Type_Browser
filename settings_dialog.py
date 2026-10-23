@@ -44,7 +44,7 @@ class SettingsDialog(QDialog):
         theme_layout = QHBoxLayout()
         theme_label = QLabel("Theme:")
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Light", "Dark"])
+        self.theme_combo.addItems(["Light", "Dark", "VS Code"])
         theme_layout.addWidget(theme_label)
         theme_layout.addWidget(self.theme_combo)
         general_layout.addLayout(theme_layout)
@@ -128,9 +128,10 @@ class SettingsDialog(QDialog):
         settings = self.browser_data.settings
         
         # General settings
-        self.homepage_edit.setText(settings.get("homepage", "https://typesearch.click/"))
+        self.homepage_edit.setText(settings.get("homepage", "https://search.typesoftware.online/"))
         self.search_edit.setText(settings.get("search_engine", "https://www.google.com/search?q="))
-        self.theme_combo.setCurrentText(settings.get("theme", "Light").capitalize())
+        theme = settings.get("theme", "vscode")
+        self.theme_combo.setCurrentText("VS Code" if theme == "vscode" else theme.capitalize())
         self.download_edit.setText(settings.get("download_path", ""))
         
         # Privacy settings
@@ -149,7 +150,8 @@ class SettingsDialog(QDialog):
         settings = {
             "homepage": self.homepage_edit.text(),
             "search_engine": self.search_edit.text(),
-            "theme": self.theme_combo.currentText().lower(),
+            "theme": "vscode" if self.theme_combo.currentText() == "VS Code"
+            else self.theme_combo.currentText().lower(),
             "download_path": self.download_edit.text(),
             "clear_history_on_exit": self.clear_history_check.isChecked(),
             "clear_cookies_on_exit": self.clear_cookies_check.isChecked(),

@@ -43,9 +43,9 @@ class BrowserData(QObject):
 
     def load_settings(self):
         default_settings = {
-            "homepage": "https://typesearch.click/",
+            "homepage": "https://search.typesoftware.online/",
             "search_engine": "https://www.google.com/search?q=",
-            "theme": "light",
+            "theme": "vscode",
             "download_path": os.path.expanduser("~/Downloads"),
             "zoom_level": 100,
             "enable_javascript": True,
@@ -78,6 +78,10 @@ class BrowserData(QObject):
                 with open(self.settings_file, 'r') as f:
                     loaded_settings = json.load(f)
                     default_settings.update(loaded_settings)
+                    if loaded_settings.get("homepage") == "https://typesearch.click/":
+                        default_settings["homepage"] = "https://search.typesoftware.online/"
+                    if loaded_settings.get("theme") == "light":
+                        default_settings["theme"] = "vscode"
             except:
                 pass
         return default_settings
