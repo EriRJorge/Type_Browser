@@ -589,8 +589,13 @@ class MainWindow(QMainWindow):
         self.unified_toolbar = self.create_unified_toolbar()
         layout.addWidget(self.unified_toolbar)
         
-        # Add tabs
-        layout.addWidget(self.tabs)
+        # Add the activity rail beside the browser content.
+        content_row = QHBoxLayout()
+        content_row.setContentsMargins(0, 0, 0, 0)
+        content_row.setSpacing(0)
+        content_row.addWidget(self.create_activity_bar())
+        content_row.addWidget(self.tabs, 1)
+        layout.addLayout(content_row, 1)
         
         # Create menubar
         self.menu_bar = self.create_menu()
@@ -1305,6 +1310,35 @@ class MainWindow(QMainWindow):
                 background: #1e1e1e;
                 border-bottom: 1px solid #333333;
             }
+
+            #activity_bar {
+                background: #181818;
+                border-right: 1px solid #2b2b2b;
+            }
+
+            #activity_button {
+                background: transparent;
+                border: none;
+                border-left: 2px solid transparent;
+                color: #858585;
+                font-size: 18px;
+                padding: 4px;
+            }
+
+            #activity_button:hover {
+                color: #ffffff;
+                background: #252526;
+            }
+
+            #activity_button:pressed {
+                color: #3794ff;
+                border-left: 2px solid #3794ff;
+            }
+
+            #toolbar_divider {
+                color: #333333;
+                margin: 0 4px;
+            }
             
             #title_bar {
                 background: #1e1e1e;
@@ -1628,11 +1662,12 @@ class MainWindow(QMainWindow):
         nav_bar = QWidget()
         nav_bar.setObjectName("nav_bar")
         nav_layout = QHBoxLayout(nav_bar)
-        nav_layout.setContentsMargins(8, 4, 8, 4)
+        nav_layout.setContentsMargins(10, 5, 10, 5)
         brand_label = QLabel("TYPE BROWSER")
         brand_label.setObjectName("brand_label")
         brand_label.setToolTip("Type Browser")
         nav_layout.addWidget(brand_label)
+        nav_layout.addWidget(self.create_toolbar_divider())
         
         # Navigation buttons
         back_btn = QPushButton("←")
@@ -1685,6 +1720,44 @@ class MainWindow(QMainWindow):
         layout.addWidget(nav_bar)
         
         return toolbar
+
+    def create_toolbar_divider(self):
+        divider = QFrame()
+        divider.setFrameShape(QFrame.VLine)
+        divider.setFrameShadow(QFrame.Plain)
+        divider.setObjectName("toolbar_divider")
+        divider.setFixedHeight(22)
+        return divider
+
+    def create_activity_bar(self):
+        activity_bar = QWidget()
+        activity_bar.setObjectName("activity_bar")
+        activity_bar.setFixedWidth(46)
+        activity_layout = QVBoxLayout(activity_bar)
+        activity_layout.setContentsMargins(0, 6, 0, 6)
+        activity_layout.setSpacing(4)
+
+        for icon, tooltip, callback in (
+            ("◈", "Browser", self.focus_url_bar),
+            ("☆", "Bookmarks", self.show_bookmarks),
+            ("◷", "History", self.show_history),
+            ("↓", "Downloads", self.show_downloads),
+        ):
+            button = QPushButton(icon)
+            button.setObjectName("activity_button")
+            button.setToolTip(tooltip)
+            button.setFixedSize(46, 40)
+            button.clicked.connect(callback)
+            activity_layout.addWidget(button)
+
+        activity_layout.addStretch()
+        settings_button = QPushButton("⚙")
+        settings_button.setObjectName("activity_button")
+        settings_button.setToolTip("Settings")
+        settings_button.setFixedSize(46, 40)
+        settings_button.clicked.connect(self.show_settings)
+        activity_layout.addWidget(settings_button)
+        return activity_bar
 
     def create_new_tab_button(self):
         button = QPushButton("+")
