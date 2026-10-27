@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                             QLabel, QPushButton)
 from PyQt5.QtCore import Qt
 
-VERSION = "1.1.0"
+VERSION = "1.0"
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):

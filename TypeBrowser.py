@@ -26,7 +26,7 @@ from about_dialog import AboutDialog
 from bookmark_manager import BookmarkDialog
 from shortcuts_dialog import ShortcutsDialog
 
-VERSION = "1.2.0"
+VERSION = "1.0"
 APP_NAME = "Type_Browser"
 HOME_PAGE = "https://search.typesoftware.online/"
 SEARCH_ENGINE = "https://www.google.com/search?q="
