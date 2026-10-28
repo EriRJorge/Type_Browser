@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, QStandardPaths, pyqtSignal
 
 class BrowserData(QObject):
     bookmarks_changed = pyqtSignal()
@@ -10,7 +10,11 @@ class BrowserData(QObject):
 
     def __init__(self):
         super().__init__()
-        self.data_dir = os.path.expanduser("~/.type_browser")
+        self.data_dir = QStandardPaths.writableLocation(
+            QStandardPaths.AppDataLocation
+        )
+        if not self.data_dir:
+            self.data_dir = os.path.expanduser("~/.type_browser")
         self.bookmarks_file = os.path.join(self.data_dir, "bookmarks.json")
         self.history_file = os.path.join(self.data_dir, "history.json")
         self.settings_file = os.path.join(self.data_dir, "settings.json")

@@ -17,37 +17,43 @@ controls, private-by-default permissions, and useful keyboard shortcuts.
 
 ## Requirements
 
-- Windows 10 or later (64-bit recommended)
+- Windows 10 or later, macOS 11 or later, or a modern 64-bit Linux distribution
 - Python 3.8 or newer
 - PyQt5 5.15 or newer
 - PyQtWebEngine 5.15 or newer
 
 ## Development setup
 
-```powershell
+```text
 git clone https://github.com/EriRJorge/Type_Browser.git
 cd Type_Browser
 python -m venv .venv
+# Windows PowerShell:
 .venv\Scripts\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 python TypeBrowser.py
 ```
 
-If PowerShell execution policy prevents activation, run the interpreter
-directly with `.venv\Scripts\python.exe TypeBrowser.py`.
+If activation is unavailable, run the virtual environment's Python
+interpreter directly. PyQt5 and PyQtWebEngine provide native Qt WebEngine
+packages for each supported operating system.
 
-## Building for Windows
+## Building a standalone application
 
-Build a standalone executable with:
+PyInstaller must be run on the operating system being packaged. The shared
+specification can build a native application on Windows, macOS, or Linux:
 
-```powershell
-python build_robust.py
+```text
+python -m PyInstaller Type_Browser_robust.spec --noconfirm --clean
 ```
 
-The Inno Setup definition in `Type_Browser.iss` can package the resulting
-`dist\Type_Browser.exe` into an installer. Test the executable on a clean
-Windows machine before distributing it.
+The output is written to `dist` with the native application format for that
+platform (`.exe` on Windows, an application bundle on macOS, and an executable
+on Linux). The repository's GitHub Actions workflow builds all three targets
+on their native runners.
 
 ## Keyboard shortcuts
 

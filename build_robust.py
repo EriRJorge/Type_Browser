@@ -3,7 +3,7 @@ import os
 import shutil
 
 print("Building Type Browser with robust configuration...")
-print("This will create a more compatible executable...")
+print("The native application format for this operating system will be created...")
 
 # Clean previous builds
 dist_path = "dist"
@@ -29,4 +29,4 @@ PyInstaller.__main__.run([
 ])
 
 print("\nBuild completed!")
-print("The executable should now be more compatible with different Windows machines.") 
+print("The native application should now be more compatible across supported systems.")

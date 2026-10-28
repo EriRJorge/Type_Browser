@@ -10,7 +10,8 @@
 import sys
 import os
 from urllib.parse import quote_plus
-from PyQt5.QtCore import QUrl, Qt, QSize, QTimer, QSettings
+from PyQt5.QtCore import (QUrl, Qt, QSize, QTimer, QSettings,
+                          QStandardPaths)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QToolBar, QAction, 
                             QLineEdit, QTabWidget, QWidget, QVBoxLayout, 
                             QShortcut, QMenu, QDialog, QLabel, QVBoxLayout, 
@@ -31,11 +32,33 @@ APP_NAME = "Type_Browser"
 HOME_PAGE = "https://search.typesoftware.online/"
 SEARCH_ENGINE = "https://www.google.com/search?q="
 
+if sys.platform == "win32":
+    PLATFORM_USER_AGENT = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/123.0.0.0 Safari/537.36"
+    )
+    SEC_CH_UA_PLATFORM = b'"Windows"'
+elif sys.platform == "darwin":
+    PLATFORM_USER_AGENT = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/123.0.0.0 Safari/537.36"
+    )
+    SEC_CH_UA_PLATFORM = b'"macOS"'
+else:
+    PLATFORM_USER_AGENT = (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/123.0.0.0 Safari/537.36"
+    )
+    SEC_CH_UA_PLATFORM = b'"Linux"'
+
 class RequestInterceptor(QWebEngineUrlRequestInterceptor):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.download_path = os.path.expanduser("~/Downloads")
-        self.chrome_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        self.chrome_user_agent = PLATFORM_USER_AGENT
 
     def interceptRequest(self, info):
         url = info.requestUrl()
@@ -49,7 +72,7 @@ class RequestInterceptor(QWebEngineUrlRequestInterceptor):
         info.setHttpHeader(b"User-Agent", self.chrome_user_agent.encode())
         info.setHttpHeader(b"sec-ch-ua", b'"Chromium";v="123", "Google Chrome";v="123", "Not:A-Brand";v="99"')
         info.setHttpHeader(b"sec-ch-ua-mobile", b"?0")
-        info.setHttpHeader(b"sec-ch-ua-platform", b'"Windows"')
+        info.setHttpHeader(b"sec-ch-ua-platform", SEC_CH_UA_PLATFORM)
         
         # Set security headers for main frame requests
         if info.resourceType() == QWebEngineUrlRequestInfo.ResourceTypeMainFrame:
@@ -194,14 +217,16 @@ class WebPage(QWebEnginePage):
         settings.setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
         
         # Set modern user agent with latest Chrome version
-        chrome_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-        self.profile().setHttpUserAgent(chrome_user_agent)
+        self.profile().setHttpUserAgent(PLATFORM_USER_AGENT)
         
         # Enable hardware acceleration and caching
         self.profile().setHttpCacheType(QWebEngineProfile.DiskHttpCache)
         self.profile().setPersistentCookiesPolicy(QWebEngineProfile.AllowPersistentCookies)
-        self.profile().setCachePath(os.path.join(os.path.expanduser("~"), ".cache", "type_browser"))
-        self.profile().setPersistentStoragePath(os.path.join(os.path.expanduser("~"), ".cache", "type_browser"))
+        cache_path = QStandardPaths.writableLocation(QStandardPaths.CacheLocation)
+        if not cache_path:
+            cache_path = os.path.join(os.path.expanduser("~"), ".cache", "type_browser")
+        self.profile().setCachePath(cache_path)
+        self.profile().setPersistentStoragePath(cache_path)
         
         # Set additional headers for modern web compatibility
         self.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
@@ -1928,11 +1953,7 @@ class MainWindow(QMainWindow):
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 
     return os.path.join(base_path, relative_path)
 
@@ -1969,8 +1990,8 @@ def main():
     settings.setAttribute(QWebEngineSettings.AllowGeolocationOnInsecureOrigins, True)
     settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, False)
     
-    # Set modern user agent for all profiles
-    QWebEngineProfile.defaultProfile().setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    # Set a platform-appropriate user agent for all profiles.
+    QWebEngineProfile.defaultProfile().setHttpUserAgent(PLATFORM_USER_AGENT)
 
     # Keep-alive timer to prevent abrupt closure
     keep_alive = QTimer()

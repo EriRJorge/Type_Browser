@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="Type_Browser",
-    version="1.1.0",
+    version="1.0",
     description="A modern, lightweight web browser built with Python and Qt",
     author="Type Browser Team",
     author_email="contact@typebrowser.com",
@@ -26,6 +26,9 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: MacOS",
+        "Operating System :: POSIX :: Linux",
         "Topic :: Internet :: WWW/HTTP :: Browsers",
         "Topic :: Desktop Environment :: Desktop Environment",
     ],
