@@ -3,6 +3,7 @@ name: Build Type Browser
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -42,3 +43,39 @@ jobs:
         with:
           name: Type_Browser-${{ runner.os }}
           path: dist/
+
+      - name: Package release asset
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a "Type_Browser-${RUNNER_OS}.zip" ./dist/*
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            tar -czf "Type_Browser-${RUNNER_OS}.tar.gz" -C dist .
+          else
+            tar -czf "Type_Browser-${RUNNER_OS}.tar.gz" -C dist .
+          fi
+
+      - name: Upload release asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ runner.os }}
+          path: Type_Browser-${{ runner.os }}.*
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" release-assets/* --repo "${GITHUB_REPOSITORY}" --title "Type Browser ${GITHUB_REF_NAME#v}" --generate-notes
